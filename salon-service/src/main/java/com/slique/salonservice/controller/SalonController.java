@@ -11,11 +11,12 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * REST Controller for managing Salon-related operations.
- * Provides endpoints for CRUD operations and searching salons by location.
  */
+
 @RequiredArgsConstructor
 @RestController
 @RequestMapping("/api/salons")
@@ -81,7 +82,7 @@ public class SalonController {
 	 * * @param salonId Unique ID of the salon
 	 * @return SalonDto with HTTP Status 200 (OK)
 	 */
-	@GetMapping(path = "/{salonId}", consumes = "application/json", produces = "application/json")
+	@GetMapping(path = "/{salonId}",  produces = "application/json")
 	public ResponseEntity<SalonDto> getSalonById(@PathVariable Long salonId) {
 		Salon salon = salonService.getSalonBYId(salonId);
 		return new ResponseEntity<>(SalonMapper.mapToSalonDto(salon), HttpStatus.OK);
@@ -92,11 +93,19 @@ public class SalonController {
 	 * * @param ownerId Unique ID of the user who owns the salon
 	 * @return SalonDto with HTTP Status 200 (OK)
 	 */
-	@GetMapping(path = "/{ownerId}", consumes = "application/json", produces = "application/json")
-	public ResponseEntity<SalonDto> getSalonBYOwnerId(@PathVariable Long ownerId) {
-		Salon salon = salonService.getSalonBYOwnerId(ownerId);
-		return new ResponseEntity<>(SalonMapper.mapToSalonDto(salon), HttpStatus.OK);
+	@GetMapping(path = "/owner/{ownerId}",  produces = "application/json")
+	public ResponseEntity<List<SalonDto>> getSalonBYOwnerId(@PathVariable Long ownerId) {
+		List<Salon> salons = salonService.getSalonBYOwnerId(ownerId);
+		List<SalonDto> salonDtos = salons.stream()
+				.map(SalonMapper::mapToSalonDto)
+				.toList();
+		
+		return new ResponseEntity<>(salonDtos, HttpStatus.OK);
 	}
+	
+	
+	
+	
 	
 	/**
 	 * Searches for salons located in a specific city.

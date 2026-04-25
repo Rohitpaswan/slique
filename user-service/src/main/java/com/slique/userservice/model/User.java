@@ -1,5 +1,6 @@
 package com.slique.userservice.model;
 
+import com.slique.userservice.domain.UserRole;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
@@ -26,7 +27,7 @@ public class User {
 	@Column(nullable = false, unique = true)
 	private String phone;
 	@Column(nullable = false)
-	private String role;
+	private UserRole userRole;
 	@CreationTimestamp
 	private LocalDateTime createdAt;
 	@UpdateTimestamp

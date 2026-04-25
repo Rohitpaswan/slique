@@ -68,12 +68,14 @@ public class SalonServiceImpl implements SalonService {
 	}
 	
 	@Override
-	public Salon getSalonBYOwnerId(Long ownerId) {
-			Optional<Salon> salon = salonRepository.findByownerId(ownerId);
-			if(salon.isPresent()){
-				return  salon.get();
-			}
-			throw new RuntimeException("Salon not found with ownerId: " + ownerId);
+	public List<Salon> getSalonByOwnerId(Long ownerId) {
+		List<Salon> salons = salonRepository.findByownerId(ownerId);
+		
+		if (!salons.isEmpty()) {
+			return salons;
+		}
+		
+		throw new RuntimeException("Salon not found with ownerId: " + ownerId);
 	}
 	
 	@Override
