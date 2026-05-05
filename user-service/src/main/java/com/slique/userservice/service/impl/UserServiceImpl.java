@@ -1,8 +1,9 @@
-package com.slique.userservice.service;
+package com.slique.userservice.service.impl;
 
 
 import com.slique.userservice.model.User;
 import com.slique.userservice.repository.UserRepository;
+import com.slique.userservice.service.UserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -33,10 +34,11 @@ public class UserServiceImpl implements UserService {
                 .orElseThrow(() -> new RuntimeException("User not found with id: " + id));
         User updatedUser = User.builder()
                 .id(user.getId()) // must include ID
-                .fullName(userRequest.getFullName())
+                .firstName(userRequest.getFirstName())
+                .lastName(userRequest.getLastName())
                 .email(userRequest.getEmail())
                 .phone(userRequest.getPhone())
-                .role(userRequest.getRole())
+                .userRole(userRequest.getUserRole())
                 .createdAt(user.getCreatedAt()) // keep original
                 .updatedAt(LocalDateTime.now())
                 .build();

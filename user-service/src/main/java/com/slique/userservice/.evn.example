@@ -1,0 +1,16 @@
+# .env.example
+# copy this file, rename to .env and fill values
+
+
+# Database
+DB_URL=
+DB_USERNAME=
+DB_PASSWORD=
+
+# Keycloak
+KEYCLOAK_BASE_URL=
+KEYCLOAK_REALM=
+KEYCLOAK_CLIENT_ID=
+KEYCLOAK_CLIENT_SECRET=
+KEYCLOAK_CLIENT_UUID=
+KEYCLOAK_SCOPE=
