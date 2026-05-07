@@ -5,6 +5,7 @@ import com.slique.userservice.domain.KeycloakRole;
 import com.slique.userservice.payload.dto.KeycloakUserDto;
 import com.slique.userservice.payload.dto.SignupDto;
 import com.slique.userservice.payload.request.Credential;
+import com.slique.userservice.payload.request.TokenRequest;
 import com.slique.userservice.payload.request.UserRequest;
 import com.slique.userservice.payload.response.TokenResponse;
 import lombok.RequiredArgsConstructor;
@@ -27,8 +28,8 @@ public class KeycloakService {
     private final KeycloakConfig keycloakConfig;
 
     public void createUser(SignupDto signupDto) {
-        String ACCESS_TOKEN = tokenGeneration(null, null,
-                "password", null).getAccessToken();
+        TokenResponse tokenResponse = tokenGeneration(TokenRequest.builder().grantType("client_credentials").build());
+        String ACCESS_TOKEN = tokenResponse.getAccessToken();
 
         List<Credential> credentials = new ArrayList<>();
         Credential credential = Credential.builder()
@@ -94,24 +95,11 @@ public class KeycloakService {
 
 
     //generate toke
-    public TokenResponse tokenGeneration(String username, String password, String grantType, String refershToken) {
+    public TokenResponse tokenGeneration(TokenRequest tokenRequest) {
         HttpHeaders httpHeaders = new HttpHeaders();
         httpHeaders.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
 
-        MultiValueMap<String, String> requestBody = new LinkedMultiValueMap<>();
-        requestBody.add("client_id", keycloakConfig.getClientId());
-        requestBody.add("client_secret", keycloakConfig.getClientSecret());
-        requestBody.add("grant_type", grantType);
-        requestBody.add("scope", keycloakConfig.getScope());
-
-        if (username != null && (password != null) && (refershToken != null)) {
-            requestBody.add("username", username);
-            requestBody.add("password", password);
-            requestBody.add("refresh_token", refershToken);
-
-        }
-
-        HttpEntity<MultiValueMap<String, String>> requestEntity = new HttpEntity<>(requestBody, httpHeaders);
+        HttpEntity<MultiValueMap<String, String>> requestEntity = getMultiValueMapHttpEntity(tokenRequest, httpHeaders);
         try {
             ResponseEntity<TokenResponse> responseResponseEntity = restTemplate.exchange(
                     keycloakConfig.getTokenUrl(),
@@ -128,6 +116,22 @@ public class KeycloakService {
         }
 
 
+    }
+
+    private HttpEntity<MultiValueMap<String, String>> getMultiValueMapHttpEntity(TokenRequest tokenRequest, HttpHeaders httpHeaders) {
+        MultiValueMap<String, String> requestBody = new LinkedMultiValueMap<>();
+        requestBody.add("client_id", keycloakConfig.getClientId());
+        requestBody.add("client_secret", keycloakConfig.getClientSecret());
+        requestBody.add("grant_type", tokenRequest.getGrantType());
+        requestBody.add("scope", keycloakConfig.getScope());
+
+        if (tokenRequest.getUsername() != null)  requestBody.add("username", tokenRequest.getUsername());
+        if(tokenRequest.getPassword() != null)    requestBody.add("password", tokenRequest.getPassword());
+        if(tokenRequest.getRefreshToken() != null)    requestBody.add("refresh_token", tokenRequest.getRefreshToken());
+
+
+        HttpEntity<MultiValueMap<String, String>> requestEntity = new HttpEntity<>(requestBody, httpHeaders);
+        return requestEntity;
     }
 
     public KeycloakRole getUserRole(String clientUuid, String token, String role) {
