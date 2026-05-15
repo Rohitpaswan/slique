@@ -179,4 +179,35 @@ public class KeycloakService {
 
     }
 
+
+    public KeycloakUserDto fetchUserProfileByJwt(String token)  {
+        System.out.println("keycloak profile token "+ token);
+        String url = keycloakConfig.getBaseUrl() +"/realms/slique/protocol/openid-connect/userinfo";
+
+       HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        headers.add("Authorization",  token);
+
+
+        // Create an HttpEntity with the headers
+        HttpEntity<String> entity = new HttpEntity<>(headers);
+
+        try {
+            // Send the GET request
+            ResponseEntity<KeycloakUserDto> response = restTemplate.exchange(
+                    url,
+                    HttpMethod.GET,
+                    entity,
+                    KeycloakUserDto.class
+            );
+
+            // Extract and return the first user object
+            return response.getBody();
+
+        } catch (Exception e) {
+            System.out.println("Failed to fetch user details: " + e.getMessage());
+            throw new RuntimeException("Failed to fetch user details: " + e.getMessage());
+        }
+    }
+
 }

@@ -2,7 +2,9 @@ package com.slique.userservice.service.impl;
 
 
 import com.slique.userservice.model.User;
+import com.slique.userservice.payload.dto.KeycloakUserDto;
 import com.slique.userservice.repository.UserRepository;
+import com.slique.userservice.service.KeycloakService;
 import com.slique.userservice.service.UserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -16,13 +18,24 @@ import java.util.List;
 public class UserServiceImpl implements UserService {
 
     private final UserRepository userRepository;
+    private final KeycloakService keycloakService;
 
     @Override
     public List<User> getAllUsers() {
         return userRepository.findAll();
     }
 
+    public User getUserByEmail(String email) {
+        User user=userRepository.findByEmail(email);
+        if(user==null){
+            throw new RuntimeException("User not found with email: "+email);
+        }
+        return user;
+    }
 
+    public User getUserById(Long id)  {
+        return userRepository.findById(id).orElse(null);
+    }
 
     @Override
     public User updateUser(Long id, User userRequest) {
@@ -39,6 +52,13 @@ public class UserServiceImpl implements UserService {
                 .updatedAt(LocalDateTime.now())
                 .build();
         return userRepository.save(updatedUser);
+    }
+
+    @Override
+    public User getUserFromJwtToken(String jwt) {
+        KeycloakUserDto userinfo = keycloakService.fetchUserProfileByJwt(jwt);
+        return userRepository.findByEmail(userinfo.getEmail());
+
     }
 
     @Override
