@@ -47,6 +47,17 @@
 			<groupId>org.springframework.cloud</groupId>
 			<artifactId>spring-cloud-starter-netflix-eureka-client</artifactId>
 		</dependency>
+<!--	spring security-->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-security-oauth2-resource-server</artifactId>
+		</dependency>
+		<!-- security oauth2 -->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-security-oauth2-resource-server-test</artifactId>
+			<scope>test</scope>
+		</dependency>
 
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
@@ -84,7 +95,7 @@
 				<version>3.5.1</version>
 				<configuration>
 					<to>
-						<image>${docker.username}/slique-eureka-server:v1</image>
+						<image>${docker.username}/slique-gateway:v1</image>
 					</to>
 				</configuration>
 			</plugin>
