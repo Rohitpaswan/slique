@@ -45,6 +45,7 @@ public class KeycloakService {
         userRequest.setLastName(signupDto.getLastName());
         userRequest.setEmail(signupDto.getEmail());
         userRequest.setEmailVerified(false);
+        userRequest.setEnabled(true);
         userRequest.setCredentials(credentials);
 
         //create http header
@@ -128,10 +129,8 @@ public class KeycloakService {
         if (tokenRequest.getUsername() != null)  requestBody.add("username", tokenRequest.getUsername());
         if(tokenRequest.getPassword() != null)    requestBody.add("password", tokenRequest.getPassword());
         if(tokenRequest.getRefreshToken() != null)    requestBody.add("refresh_token", tokenRequest.getRefreshToken());
+        return new HttpEntity<>(requestBody, httpHeaders);
 
-
-        HttpEntity<MultiValueMap<String, String>> requestEntity = new HttpEntity<>(requestBody, httpHeaders);
-        return requestEntity;
     }
 
     public KeycloakRole getUserRole(String clientUuid, String token, String role) {

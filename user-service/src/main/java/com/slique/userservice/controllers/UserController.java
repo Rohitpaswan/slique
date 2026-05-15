@@ -1,15 +1,10 @@
 package com.slique.userservice.controllers;
 
-
 import com.slique.userservice.model.User;
-import com.slique.userservice.payload.dto.SignupDto;
-import com.slique.userservice.service.KeycloakService;
 import com.slique.userservice.service.UserService;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-
 import java.util.List;
 
 @RestController
@@ -17,18 +12,13 @@ import java.util.List;
 @RequiredArgsConstructor
 public class UserController {
     private final UserService userService;
-    private final KeycloakService keycloakService;
-    
-	
-	@GetMapping
+
+
+    @GetMapping
     public ResponseEntity<List<User>> getAllUsers() {
         return ResponseEntity.ok(userService.getAllUsers());
     }
 
-    @PostMapping("/create")
-    public ResponseEntity<User> createUser(@RequestBody User userRequest) {
-        return new ResponseEntity<>(userService.createUser(userRequest), HttpStatus.CREATED);
-    }
 
     @PutMapping("/{id}")
     public ResponseEntity<User> updateUser(@PathVariable Long id, @RequestBody User userRequest) {
@@ -40,10 +30,6 @@ public class UserController {
         userService.deleteUser(id);
         return ResponseEntity.noContent().build();
     }
-    
-    @PostMapping("/auth")
-    public String auth(@RequestBody SignupDto signupDto){
-        keycloakService.createUser(signupDto);
-        return "ok";
-    }
+
+
 }

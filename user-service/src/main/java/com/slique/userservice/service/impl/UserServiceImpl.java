@@ -22,11 +22,7 @@ public class UserServiceImpl implements UserService {
         return userRepository.findAll();
     }
 
-    @Override
-    public User createUser(User userRequest) {
-        
-        return userRepository.save(userRequest);
-    }
+
 
     @Override
     public User updateUser(Long id, User userRequest) {
