@@ -18,5 +18,6 @@ public interface SalonService {
 	 List<Salon> getSalonBYOwnerId(Long ownerId);
 	 
 	 List<Salon> searchSalonByCity(String city);
+	void deleteSalon(Long salonId, UserDto userDto);
 	
 }

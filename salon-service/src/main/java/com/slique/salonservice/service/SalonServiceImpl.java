@@ -19,6 +19,19 @@ public class SalonServiceImpl implements SalonService {
 	
 	@Override
 	public Salon createSalon(SalonDto salonDto, UserDto userDto) {
+		//chech it is owner or admin
+
+		//check for multiple salon
+		boolean alreadyExists = salonRepository.existsByAddressAndCity(
+				salonDto.getName(),
+				salonDto.getCity()
+		);
+
+		if (alreadyExists) {
+			throw new RuntimeException("You already have a salon named '"
+					+ salonDto.getName() + "' in " + salonDto.getCity());
+		}
+
 		Salon salon = Salon.builder()
 				.name(salonDto.getName())
 				.email(salonDto.getEmail())
@@ -38,7 +51,11 @@ public class SalonServiceImpl implements SalonService {
 		if( ! salonRepository.existsById(salonDto.getSalonId())){
 			 throw new RuntimeException("Salon not found");
 		}
+
+		if(!salonDto.getOwnerId().equals(userDto.getId())) throw new RuntimeException("Not Auhthrizaie");
+
 		Salon salon = Salon.builder()
+				.salonId(salonDto.getSalonId())
 				.name(salonDto.getName())
 				.email(salonDto.getEmail())
 				.images(salonDto.getImages())
@@ -68,7 +85,7 @@ public class SalonServiceImpl implements SalonService {
 	}
 	
 	@Override
-	public List<Salon> getSalonByOwnerId(Long ownerId) {
+	public List<Salon> getSalonBYOwnerId(Long ownerId) {
 		List<Salon> salons = salonRepository.findByownerId(ownerId);
 		
 		if (!salons.isEmpty()) {
@@ -81,5 +98,17 @@ public class SalonServiceImpl implements SalonService {
 	@Override
 	public List<Salon> searchSalonByCity(String city) {
 		return salonRepository.searchSalonByCity(city);
+	}
+
+	@Override
+	public void deleteSalon(Long salonId, UserDto userDto) {
+		Salon salon = salonRepository.findById(salonId)
+				.orElseThrow(() -> new RuntimeException("Salon not found with salonId: " + salonId));
+
+		if (!salon.getOwnerId().equals(userDto.getId())) {
+			throw new RuntimeException("You are not authorized to delete this salon");
+		}
+
+		salonRepository.deleteById(salonId);
 	}
 }

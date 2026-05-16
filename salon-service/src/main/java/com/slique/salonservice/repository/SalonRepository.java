@@ -16,7 +16,8 @@ public interface SalonRepository extends JpaRepository<Salon, Long> {
 	
 	@Query("SELECT s FROM Salon s WHERE LOWER(s.city) LIKE LOWER(CONCAT('%', :keyword, '%'))")
 	List<Salon> searchSalonByCity(@Param("keyword") String keyword);
-	
+
+	boolean existsByAddressAndCity(String address, String city);
 	
 	
 }

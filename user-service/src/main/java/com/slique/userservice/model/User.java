@@ -30,6 +30,8 @@ public class User {
 	private String email;
 	@Column(nullable = false, unique = true)
 	private String phone;
+
+	@Enumerated(EnumType.STRING)
 	@Column(nullable = false)
 	private UserRole userRole;
 	@CreationTimestamp
