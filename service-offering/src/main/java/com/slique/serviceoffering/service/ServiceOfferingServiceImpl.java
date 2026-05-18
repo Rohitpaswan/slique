@@ -33,12 +33,12 @@ public class ServiceOfferingServiceImpl implements ServiceOfferingService{
 	
 	
 	@Override
-	public ServiceOffering updateServiceOffering(Long salonId, ServiceDto serviceDto) {
+	public ServiceOffering updateServiceOffering(Long serviceId, Long salonId, ServiceDto serviceDto) {
 		
 		ServiceOffering serviceOffering = serviceRepository.findById(serviceDto.getId())
 				.orElseThrow(() -> new RuntimeException("Service offering not found"));
 		
-		// Optional security check (recommended)
+		//  security check
 		if (!serviceOffering.getSalonId().equals(salonId)) {
 			throw new RuntimeException("Unauthorized update attempt");
 		}

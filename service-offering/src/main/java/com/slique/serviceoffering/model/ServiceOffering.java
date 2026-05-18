@@ -12,6 +12,7 @@ import lombok.NoArgsConstructor;
 @Data
 @Builder
 @Entity
+@Table(name = "service_offering")
 public class ServiceOffering {
 	@Id
 	@GeneratedValue(strategy = GenerationType.AUTO)
