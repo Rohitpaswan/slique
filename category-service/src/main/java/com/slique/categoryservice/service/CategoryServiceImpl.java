@@ -1,5 +1,6 @@
 package com.slique.categoryservice.service;
 
+import com.slique.categoryservice.dto.CategoryDto;
 import com.slique.categoryservice.dto.SalonDto;
 import com.slique.categoryservice.model.Category;
 import com.slique.categoryservice.repository.CategoryRepository;
@@ -7,6 +8,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 
+import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 
@@ -17,14 +19,14 @@ public class CategoryServiceImpl implements CategoryService{
 	
 	
 	@Override
-	public Category saveCategory(Category category, SalonDto salonDto) {
-	
-		Category savedCategory = Category.builder()
-				.name(category.getName())
-				.image(category.getImage())
-				.salonId(salonDto.getSalonId())
-				.build();
-		return categoryRepository.save(savedCategory);
+	public Category saveCategory(CategoryDto categoryDto, SalonDto salonDto) {
+
+		Category category = new Category();
+		category.setName(categoryDto.getName());
+		category.setImage(categoryDto.getImage());
+		category.setSalonId(salonDto.getSalonId());
+		return categoryRepository.save(category);
+
 	}
 	
 	@Override
@@ -33,7 +35,7 @@ public class CategoryServiceImpl implements CategoryService{
 	}
 	
 	@Override
-	public Set<Category> getAllCategory(Long salonId) {
+	public Set<Category> getAllCategoriesBySalon(Long salonId) {
 		return categoryRepository.findBySalonId(salonId);
 		
 	}
@@ -44,14 +46,19 @@ public class CategoryServiceImpl implements CategoryService{
 		if(categoryOptional.isPresent()){
 			return categoryOptional.get();
 		}
-		throw new RuntimeException("not find category");
+		throw new RuntimeException("Category not found");
 	}
 	
 	@Override
 	public void deleteCategoryById(Long categoryId, Long salonId) {
 		Category category = getCategoryById(categoryId);
 		if(! category.getSalonId().equals(salonId))
-			throw new RuntimeException("Dont have permission to delete");
+			throw new RuntimeException("Don't have permission to delete");
 		categoryRepository.delete(category);
+	}
+
+	@Override
+	public List<Category> getAllCategories() {
+		return categoryRepository.findAll();
 	}
 }
