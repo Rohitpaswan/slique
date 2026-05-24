@@ -8,15 +8,16 @@ import org.springframework.stereotype.Service;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 @Service
 public class SalonServiceImpl implements SalonService {
 	private final SalonRepository salonRepository;
-	
+
 	public SalonServiceImpl(SalonRepository salonRepository) {
 		this.salonRepository = salonRepository;
 	}
-	
+
 	@Override
 	public Salon createSalon(SalonDto salonDto, UserDto userDto) {
 		//chech it is owner or admin
@@ -45,7 +46,7 @@ public class SalonServiceImpl implements SalonService {
 				.build();
 		return salonRepository.save(salon);
 	}
-	
+
 	@Override
 	public Salon update(SalonDto salonDto, UserDto userDto, Long salonId) {
 		if( ! salonRepository.existsById(salonDto.getSalonId())){
@@ -68,13 +69,13 @@ public class SalonServiceImpl implements SalonService {
 				.build();
 		return salonRepository.save(salon);
 	}
-	
+
 	@Override
 	public List<Salon> getAllSalon() {
 		return 	salonRepository.findAll();
-		
+
 	}
-	
+
 	@Override
 	public Salon getSalonBYId(Long salonId) {
 		Optional<Salon> salon = salonRepository.findById(salonId);
@@ -83,18 +84,24 @@ public class SalonServiceImpl implements SalonService {
 		}
 		throw new RuntimeException("Salon not found with salonId: " + salonId);
 	}
-	
+
 	@Override
 	public List<Salon> getSalonBYOwnerId(Long ownerId) {
 		List<Salon> salons = salonRepository.findByownerId(ownerId);
-		
+
 		if (!salons.isEmpty()) {
 			return salons;
 		}
-		
+
 		throw new RuntimeException("Salon not found with ownerId: " + ownerId);
 	}
-	
+
+	@Override
+	public List<Salon> getSalonsByIds(Set<Long> salonIds) {
+		if (salonIds == null || salonIds.isEmpty()) { return List.of(); }
+		return salonRepository.findBySalonIdIn(salonIds);
+	}
+
 	@Override
 	public List<Salon> searchSalonByCity(String city) {
 		return salonRepository.searchSalonByCity(city);

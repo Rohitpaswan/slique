@@ -7,6 +7,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Set;
 
 
 @Repository
@@ -18,6 +19,7 @@ public interface SalonRepository extends JpaRepository<Salon, Long> {
 	List<Salon> searchSalonByCity(@Param("keyword") String keyword);
 
 	boolean existsByAddressAndCity(String address, String city);
+	List<Salon> findBySalonIdIn(Set<Long> salonIds);
 	
 	
 }

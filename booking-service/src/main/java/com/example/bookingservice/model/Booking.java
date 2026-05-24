@@ -31,6 +31,7 @@ public class Booking {
 	@ElementCollection
 	private Set<Long> serviceIds;
 	
+	@Builder.Default
 	private BookingStatus status = BookingStatus.PENDING;
 	
 	private Double totalPrice;

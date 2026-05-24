@@ -1,6 +1,5 @@
-package com.example.bookingservice.dto;
+package com.example.bookingservice.request;
 
-import com.example.bookingservice.model.BookingStatus;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -19,8 +18,3 @@ public class BookingRequest {
 	private Set<Long> serviceIds;
 	
 }
-
- //exist //10-11
-//current //10:30 - 11:30
-
-//currentStart.isBefore(existEnd) || currentEND.is

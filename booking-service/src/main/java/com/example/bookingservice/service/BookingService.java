@@ -1,11 +1,10 @@
 package com.example.bookingservice.service;
 
-import com.example.bookingservice.dto.BookingRequest;
+import com.example.bookingservice.request.BookingRequest;
 import com.example.bookingservice.dto.SalonDto;
-import com.example.bookingservice.dto.ServiceDto;
+import com.example.bookingservice.dto.ServiceOfferingDto;
 import com.example.bookingservice.dto.UserDto;
 import com.example.bookingservice.model.Booking;
-import com.example.bookingservice.model.BookingStatus;
 import com.example.bookingservice.model.SalonReport;
 
 import java.time.LocalDateTime;
@@ -14,9 +13,9 @@ import java.util.Set;
 
 public interface BookingService {
 	Booking createBooking(BookingRequest booking, UserDto userDto,
-	                             SalonDto salonDto, Set<ServiceDto> serviceDtoSet);
+	                             SalonDto salonDto, Set<ServiceOfferingDto> serviceDtoSet);
 	
-	Booking updateBooking(Long bookingId, BookingStatus bookingStatus);
+	Booking cancelPartialServices(Long bookingId, Set<Long> cancelServiceIds, UserDto userDto);
 	
 	List<Booking> getBookingByCustomer(Long customerId);
 	List<Booking> getBookingBySalon(Long salonId);

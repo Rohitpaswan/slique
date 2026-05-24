@@ -10,6 +10,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Set;
 
 @RestController
 @RequestMapping("/api/users")
@@ -41,6 +42,13 @@ public class UserController {
         UserDto userDTO = UserMapper.mapToUserDto(user);
         return new ResponseEntity<>(userDTO, HttpStatus.OK);
     }
+
+
+    @PostMapping("/batch")
+    public ResponseEntity<List<User>> getUsersByIds( @RequestBody Set<Long> ids ) {
+        return ResponseEntity.ok( userService.getUsersByIds(ids) );
+    }
+
 
 
 //    @PutMapping("/{id}")

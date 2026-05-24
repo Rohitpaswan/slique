@@ -1,7 +1,6 @@
 package com.example.bookingservice.dto;
 
 import com.example.bookingservice.model.BookingStatus;
-import jakarta.persistence.ElementCollection;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -26,7 +25,13 @@ public class BookingDto {
 	private LocalDateTime endTime;
 	
 	private Set<Long> serviceIds;
-	
+
+	private UserDto customer;
+	private Set<ServiceOfferingDto> services;
+
+	private SalonDto salon;
+
+	@Builder.Default
 	private BookingStatus status = BookingStatus.PENDING;
 	
 	private Double totalPrice;

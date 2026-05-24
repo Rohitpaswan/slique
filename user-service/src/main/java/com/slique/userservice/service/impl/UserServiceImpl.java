@@ -11,6 +11,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Set;
 
 
 @Service
@@ -67,5 +68,11 @@ public class UserServiceImpl implements UserService {
                         .orElseThrow(() -> new RuntimeException("User not found with id: " + id));
         userRepository.deleteById(id);
         
+    }
+
+    @Override
+    public List<User> getUsersByIds(Set<Long> ids) {
+        if (ids == null || ids.isEmpty()) { return List.of(); }
+        return userRepository.findByIdIn(ids);
     }
 }
