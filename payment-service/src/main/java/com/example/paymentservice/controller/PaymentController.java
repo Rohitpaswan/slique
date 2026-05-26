@@ -7,25 +7,26 @@ import com.example.paymentservice.payload.dto.BookingDto;
 import com.example.paymentservice.payload.dto.UserDto;
 import com.example.paymentservice.payload.response.PaymentLinkResponse;
 import com.example.paymentservice.service.PaymentService;
+import com.example.paymentservice.service.client.UserFeignClient;
 import lombok.AllArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/api/payments/")
+@RequestMapping("/api/payments")
 @AllArgsConstructor
 
 public class PaymentController {
 	private final PaymentService paymentService;
+	private final UserFeignClient userFeignClient;
 	
 	@PostMapping
-	public ResponseEntity<PaymentLinkResponse> createPayment(@RequestBody BookingDto bookingDto,
-	                                                         @RequestBody PaymentMethod paymentMethod) {
-		UserDto userDto = new UserDto();
-		userDto.setFullName("Hrithik");
-		userDto.setEmail("hrx1234");
-		userDto.setId(1L);
+	public ResponseEntity<PaymentLinkResponse> createPaymentLink(@RequestBody BookingDto bookingDto,
+	                                                         @RequestParam PaymentMethod paymentMethod,
+																 @RequestHeader("Authorization") String jwt) {
+
+		UserDto userDto = userFeignClient.getUserFromJwtToken(jwt).getBody();
 		
 		PaymentLinkResponse paymentLinkResponse = paymentService.createOrder(userDto, bookingDto, paymentMethod);
 		return ResponseEntity.status(HttpStatus.CREATED).body(paymentLinkResponse);
@@ -36,11 +37,6 @@ public class PaymentController {
 	@GetMapping("/{paymentOrderId}")
 	
 	public ResponseEntity<PaymentOrder> getPaymentOrderById(@PathVariable Long paymentOrderId) {
-		UserDto userDto = new UserDto();
-		userDto.setFullName("Hrithik");
-		userDto.setEmail("hrx1234");
-		userDto.setId(1L);
-		
 		PaymentOrder paymentOrder = paymentService.getPaymentOrderById(paymentOrderId);
 		return ResponseEntity.status(HttpStatus.OK).body(paymentOrder);
 		

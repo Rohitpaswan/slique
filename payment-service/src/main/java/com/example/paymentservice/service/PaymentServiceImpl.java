@@ -35,9 +35,14 @@ public class PaymentServiceImpl implements PaymentService {
 				.longValue();
 		
 		PaymentOrder paymentOrder = new PaymentOrder();
-		paymentOrder.setPaymentMethod(paymentMethod);
+
 		paymentOrder.setBookingId(bookingDto.getId());
+		paymentOrder.setSalonId(bookingDto.getSalonId());
+		paymentOrder.setUserId(userDto.getId());
+		paymentOrder.setPaymentMethod(paymentMethod);
 		paymentOrder.setAmount(amount);
+		paymentOrder.setStatus(PaymentOrderStatus.PENDING);
+
 		PaymentOrder saveOrder = paymentOrderRepository.save(paymentOrder);
 		PaymentLinkResponse paymentLinkResponse = new PaymentLinkResponse();
 		
@@ -51,6 +56,9 @@ public class PaymentServiceImpl implements PaymentService {
 				String paymentUrlId = paymentLink.get("id");
 				paymentLinkResponse.setPayment_link_url(paymentUrl);
 				paymentLinkResponse.setGetPayment_link_id(paymentUrlId);
+				paymentOrder.setPaymentLink(paymentUrl);
+				paymentOrder.setStatus(PaymentOrderStatus.SUCCESS);
+
 				
 				paymentOrderRepository.save(paymentOrder);
 			} catch (RazorpayException e) {
@@ -76,7 +84,7 @@ public class PaymentServiceImpl implements PaymentService {
 	
 	@Override
 	public PaymentOrder getPaymentOrderByPaymentId(String paymentId) {
-		return null;
+		return paymentOrderRepository.findByPaymentLinkId(paymentId);
 	}
 	
 	@Override
@@ -88,7 +96,7 @@ public class PaymentServiceImpl implements PaymentService {
 		paymentLinkRequest.put("description", "Payment for booking " + orderId);
 		
 		JSONObject customer = new JSONObject();
-		customer.put("name", userDto.getFullName());
+		customer.put("name", userDto.getFirstName()+ " " + userDto.getLastName() );
 		customer.put("email", userDto.getEmail());
 		
 		paymentLinkRequest.put("customer", customer);

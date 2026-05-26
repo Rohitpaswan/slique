@@ -1,0 +1,39 @@
+server:
+  port: 5009
+
+
+spring:
+  application:
+    name: payment
+  profiles:
+    active: local
+
+  datasource:
+    url: ${JDBC_DATABASE_URL}
+    username: ${JDBC_DATABASE_USERNAME}
+    password: ${JDBC_DATABASE_PASSWORD}
+
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: "http://localhost:8080/realms/slique"
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+
+# Stripe Configuration
+stripe:
+  secret:
+    key: ${STRIPE_SECRET_KEY}
+  publishable:
+    key: ${STRIPE_PUBLISHABLE_KEY}
+  webhook:
+    secret: ${STRIPE_WEBHOOK_SECRET}
+
+# Razorpay Configuration
+razorpay:
+  key:
+    id: ${RAZORPAY_KEY_ID}
+  secret: ${RAZORPAY_KEY_SECRET}

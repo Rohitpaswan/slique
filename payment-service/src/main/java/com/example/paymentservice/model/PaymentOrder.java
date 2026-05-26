@@ -21,11 +21,12 @@ public class PaymentOrder {
 	
 	@Column(nullable = false)
 	private PaymentOrderStatus status = PaymentOrderStatus.PENDING;
-	
+
+	@Enumerated(EnumType.STRING)
 	@Column(nullable = false)
 	private PaymentMethod paymentMethod;
 	
-	@Column(nullable = false)
+
 	private String paymentLink;
 	
 	@Column(nullable = false)

@@ -11,7 +11,7 @@ public class RazorpayConfig {
 	@Value("${razorpay.key.id}")
 	private String razorpayApiKey;
 	
-	@Value("${razorpay.key.secret}")
+	@Value("${razorpay.secret}")
 	private String razorpayApiSecret;
 	
 	@Bean
