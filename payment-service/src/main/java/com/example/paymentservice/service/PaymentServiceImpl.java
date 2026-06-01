@@ -95,7 +95,7 @@ public class PaymentServiceImpl implements PaymentService {
 
         log.info("selected Gateway{}", selectedGatway);
         PaymentRequest paymentRequest = getPaymentRequest(userDto, bookingDto, paymentOrder);
-        PaymentLinkResponse paymentLink = selectedGatway.processPayment(paymentRequest);
+        PaymentLinkResponse paymentLink = selectedGatway.createPaymentFlow(paymentRequest);
 
         paymentOrder.setPaymentLink(paymentLink.getPayment_link_url());
         paymentOrder.setPaymentLinkId(paymentLink.getGetPayment_link_id());
@@ -128,7 +128,7 @@ public class PaymentServiceImpl implements PaymentService {
     }
 
 
-    @Override
+
     public String createStripePaymentLink(UserDto userDto, Long amount, Long orderId) {
         try {
             Session session = Session.create(buildSessionParam(amount, orderId));
@@ -140,7 +140,7 @@ public class PaymentServiceImpl implements PaymentService {
     }
 
     @Override
-    public boolean processedPayment(PaymentOrder paymentOrder, String paymentId, String paymentLinkid) {
+    public boolean confirmPayment(PaymentOrder paymentOrder, String paymentId) {
 
         if (PaymentOrderStatus.PENDING.equals(paymentOrder.getStatus())) {
             if (PaymentMethod.RAZORPAY.equals(paymentOrder.getPaymentMethod())) {

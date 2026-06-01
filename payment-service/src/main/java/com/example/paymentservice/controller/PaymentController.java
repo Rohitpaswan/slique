@@ -50,7 +50,7 @@ public class PaymentController {
 	                                                @RequestParam String paymentLinkid) {
 		
 		PaymentOrder paymentOrder = paymentService.getPaymentOrderByPaymentId(paymentId);
-		Boolean res = paymentService.processedPayment(paymentOrder, paymentId, paymentLinkid);
+		Boolean res = paymentService.confirmPayment(paymentOrder, paymentId);
 		return ResponseEntity.ok(res);
 		
 	}

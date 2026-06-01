@@ -2,21 +2,50 @@ package com.example.paymentservice.gateway;
 
 import com.example.paymentservice.model.PaymentRequest;
 import com.example.paymentservice.payload.response.PaymentLinkResponse;
-import com.example.paymentservice.strategy.BankingSystem;
+import com.razorpay.Payment;
 import com.razorpay.PaymentLink;
 import com.razorpay.RazorpayClient;
 import com.razorpay.RazorpayException;
+import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
+import io.github.resilience4j.retry.annotation.Retry;
 import lombok.extern.slf4j.Slf4j;
 import org.json.JSONObject;
+import org.springframework.stereotype.Component;
 
+@Component("razorpayGateway")
 @Slf4j
 public class RazorpayGateway extends AbstractPaymentGateway{
+
     private final RazorpayClient razorpayClient;
-    public RazorpayGateway(BankingSystem bankingSystem, RazorpayClient razorpayClient) {
-        super(bankingSystem);
+    public RazorpayGateway( RazorpayClient razorpayClient) {
+
         this.razorpayClient = razorpayClient;
     }
 
+
+
+    @Override
+    @Retry(name = "paymentGateway")
+    @CircuitBreaker(name = "razorpayCircuit", fallbackMethod = "verifyFallback")
+    public boolean verifyPaymentWithProvider(PaymentRequest request) {
+        try {
+            Payment payment = razorpayClient.payments.fetch(String.valueOf(request.getPaymentId()));
+            String status = payment.get("status");
+            if("captured".equals(status)) {
+                log.info("Razorpay amount success for order: {}", request.getOrderId());
+                return true;
+            }
+
+            else{
+                log.warn("Razorpay amount failed for order: {}", request.getOrderId());
+                return false;
+            }
+        } catch (RazorpayException e) {
+            log.error("Razorpay Api call failed for order: {}", request.getOrderId());
+            return false;
+        }
+
+    }
 
     @Override
     protected boolean validatePayement(PaymentRequest request) {
@@ -38,10 +67,10 @@ public class RazorpayGateway extends AbstractPaymentGateway{
     }
 
 
-
-
     @Override
-    protected PaymentLinkResponse creatPaymentLink(PaymentRequest request) {
+    @Retry(name = "paymentGateway")
+    @CircuitBreaker(name = "razorpayCircuit", fallbackMethod = "createLinkFallback")
+    protected PaymentLinkResponse createPaymentLink(PaymentRequest request) {
         JSONObject paymentLinkRequest = new JSONObject();
         paymentLinkRequest.put("amount", request.getAmount());
         paymentLinkRequest.put("currency", "INR");
@@ -75,9 +104,22 @@ public class RazorpayGateway extends AbstractPaymentGateway{
 
     }
 
+
     @Override
     protected void markedAsInitiated(PaymentRequest request) {
         log.info("Razorpay payment link created for order: {}", request.getOrderId());
 
     }
+
+    public boolean verifyFallback(PaymentRequest request){
+        log.error("CIRCUIT OPEN: Cannot verify razorpayLink: {}", request.getOrderId());
+        throw new RuntimeException("Razorpay is temporarily unavailable, Try again later!!");
+    }
+
+    public boolean createLinkFallback(PaymentRequest request){
+        log.error("CIRCUIT OPEN: Cannot create razorpayLink: {}", request.getOrderId());
+        throw new RuntimeException("Razorpay is temporarily unavailable, Try again later!!");
+    }
+
+
 }
