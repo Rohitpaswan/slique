@@ -23,12 +23,14 @@ public class PaymentController {
 	
 	@PostMapping
 	public ResponseEntity<PaymentLinkResponse> createPaymentLink(@RequestBody BookingDto bookingDto,
-	                                                         @RequestParam PaymentMethod paymentMethod,
-																 @RequestHeader("Authorization") String jwt) {
+																 @RequestParam PaymentMethod paymentMethod,
+																 @RequestHeader("Authorization") String jwt,
+																 @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey) {
+
 
 		UserDto userDto = userFeignClient.getUserFromJwtToken(jwt).getBody();
 		
-		PaymentLinkResponse paymentLinkResponse = paymentService.createOrder(userDto, bookingDto, paymentMethod);
+		PaymentLinkResponse paymentLinkResponse = paymentService.createOrder(userDto, bookingDto, paymentMethod, idempotencyKey);
 		return ResponseEntity.status(HttpStatus.CREATED).body(paymentLinkResponse);
 		
 	}
