@@ -58,10 +58,7 @@ public class PaymentServiceImpl implements PaymentService {
                         "Returning existing order: {}", idempotencyKey, existing.get().getId());
                 return buildResponseFromExisting(existing.get());
             }
-            //need to fix , doubt go with pending+ initaied or only initied
-			/*
-			we are sending payment link , right if active payment decided based on id and pending or initiaed, . problem is if payment initiated, ok u can send link. but in pending status why send?? must be initiated right??
-			 */
+
             Optional<PaymentOrder> activePayment = paymentOrderRepository
                     .findByBookingIdAndStatusIn(bookingDto.getId(), List.of(PaymentOrderStatus.INITIATED));
             log.info("activePayment {}", activePayment);

@@ -2,6 +2,7 @@ package com.example.paymentservice.gateway;
 
 import com.example.paymentservice.model.PaymentRequest;
 import com.example.paymentservice.payload.response.PaymentLinkResponse;
+import com.example.paymentservice.strategy.RazorpayApiClient;
 import com.razorpay.Payment;
 import com.razorpay.PaymentLink;
 import com.razorpay.RazorpayClient;
@@ -17,9 +18,12 @@ import org.springframework.stereotype.Component;
 public class RazorpayGateway extends AbstractPaymentGateway{
 
     private final RazorpayClient razorpayClient;
-    public RazorpayGateway( RazorpayClient razorpayClient) {
+    private final RazorpayApiClient razorpayApiClient;
+
+    public RazorpayGateway(RazorpayClient razorpayClient, RazorpayApiClient razorpayApiClient) {
 
         this.razorpayClient = razorpayClient;
+        this.razorpayApiClient = razorpayApiClient;
     }
 
 
@@ -68,8 +72,6 @@ public class RazorpayGateway extends AbstractPaymentGateway{
 
 
     @Override
-    @Retry(name = "paymentGateway")
-    @CircuitBreaker(name = "razorpayCircuit", fallbackMethod = "createLinkFallback")
     protected PaymentLinkResponse createPaymentLink(PaymentRequest request) {
         JSONObject paymentLinkRequest = new JSONObject();
         paymentLinkRequest.put("amount", request.getAmount());
@@ -89,17 +91,11 @@ public class RazorpayGateway extends AbstractPaymentGateway{
         paymentLinkRequest.put("callback_url", "http://localhost:3000/payment-success/" + request.getOrderId());
         paymentLinkRequest.put("callback_method", "get");
 
-        try {
-            PaymentLink paymentLink =  razorpayClient.paymentLink.create(paymentLinkRequest);
-            PaymentLinkResponse paymentLinkResponse = new PaymentLinkResponse();
-            paymentLinkResponse.setGetPayment_link_id(paymentLink.get("id"));
-            paymentLinkResponse.setPayment_link_url(paymentLink.get("short_url"));
-            return paymentLinkResponse;
-
-        }
-        catch (RazorpayException e) {
-            throw new RuntimeException(e);
-        }
+        PaymentLink paymentLink =  razorpayApiClient.createPaymentLink(paymentLinkRequest);
+        PaymentLinkResponse paymentLinkResponse = new PaymentLinkResponse();
+        paymentLinkResponse.setGetPayment_link_id(paymentLink.get("id"));
+        paymentLinkResponse.setPayment_link_url(paymentLink.get("short_url"));
+        return paymentLinkResponse;
 
 
     }
@@ -116,10 +112,7 @@ public class RazorpayGateway extends AbstractPaymentGateway{
         throw new RuntimeException("Razorpay is temporarily unavailable, Try again later!!");
     }
 
-    public boolean createLinkFallback(PaymentRequest request){
-        log.error("CIRCUIT OPEN: Cannot create razorpayLink: {}", request.getOrderId());
-        throw new RuntimeException("Razorpay is temporarily unavailable, Try again later!!");
-    }
+
 
 
 }
