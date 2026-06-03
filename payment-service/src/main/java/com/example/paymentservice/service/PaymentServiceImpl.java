@@ -48,16 +48,36 @@ public class PaymentServiceImpl implements PaymentService {
         return paymentRequest;
     }
 
+
+
     @Override
+
     public PaymentLinkResponse createOrder(UserDto userDto, BookingDto bookingDto, PaymentMethod paymentMethod, String idempotencyKey) {
 
-        if (idempotencyKey != null && !idempotencyKey.isBlank()) {
+        if (idempotencyKey == null || idempotencyKey.isBlank()) {throw new RuntimeException("Missing idempotencyKey");}
+
             Optional<PaymentOrder> existing = paymentOrderRepository.findByIdempotencyKey(idempotencyKey);
             if (existing.isPresent()) {
-                log.info("Duplicate request detected (idempotency key: {}). " +
-                        "Returning existing order: {}", idempotencyKey, existing.get().getId());
-                return buildResponseFromExisting(existing.get());
-            }
+                PaymentOrder existingOrder = existing.get();
+                if(PaymentOrderStatus.INITIATED.equals(existingOrder.getStatus()) ||
+                     PaymentOrderStatus.SUCCESS.equals(existingOrder.getStatus())) {
+                    log.info("Duplicate request detected (idempotency key: {}). " +
+                            "Returning existing order: {}", idempotencyKey, existing.get().getId());
+                    return buildResponseFromExisting(existing.get());
+                }
+                boolean isBrokenOrder = (existingOrder.getPaymentLink() == null || existingOrder.getPaymentLinkId() == null)
+                        && (PaymentOrderStatus.PENDING.equals(existingOrder.getStatus()) || PaymentOrderStatus.FAILED.equals(existingOrder.getStatus()));
+
+
+                if(isBrokenOrder) {
+                    log.warn("Broken order-Id {}, status{}, deleting for retry ", existingOrder.getId(), existingOrder.getStatus());
+                    existingOrder.setStatus(PaymentOrderStatus.FAILED);
+                    paymentOrderRepository.save(existingOrder);
+                  throw   new RuntimeException(
+                            "Payment order " + existingOrder.getId() + " is in a broken state. Please retry.");
+
+                }
+
 
             Optional<PaymentOrder> activePayment = paymentOrderRepository
                     .findByBookingIdAndStatusIn(bookingDto.getId(), List.of(PaymentOrderStatus.INITIATED));
@@ -73,35 +93,38 @@ public class PaymentServiceImpl implements PaymentService {
         Long amount = totalPrice
                 .multiply(BigDecimal.valueOf(100))
                 .longValue();
-
         PaymentOrder paymentOrder = new PaymentOrder();
-
         paymentOrder.setBookingId(bookingDto.getId());
-        paymentOrder.setSalonId(bookingDto.getSalonId());
         paymentOrder.setUserId(userDto.getId());
         paymentOrder.setSalonId(bookingDto.getSalonId());
         paymentOrder.setPaymentMethod(paymentMethod);
         paymentOrder.setAmount(amount);
         paymentOrder.setIdempotencyKey(idempotencyKey);
-
         paymentOrder.setStatus(PaymentOrderStatus.PENDING);
         paymentOrderRepository.save(paymentOrder);
 
-        AbstractPaymentGateway selectedGatway = gateway.createPaymentGateway(
-                GatewayType.fromPaymentMethod(paymentMethod));
+        try {
 
-        log.info("selected Gateway{}", selectedGatway);
-        PaymentRequest paymentRequest = getPaymentRequest(userDto, bookingDto, paymentOrder);
-        PaymentLinkResponse paymentLink = selectedGatway.createPaymentFlow(paymentRequest);
+            AbstractPaymentGateway selectedGatway = gateway.createPaymentGateway(
+                    GatewayType.fromPaymentMethod(paymentMethod));
 
-        paymentOrder.setPaymentLink(paymentLink.getPayment_link_url());
-        paymentOrder.setPaymentLinkId(paymentLink.getGetPayment_link_id());
-        paymentOrder.setStatus(PaymentOrderStatus.INITIATED);
-        log.warn("paymentOrder{}", paymentOrder);
-        paymentOrderRepository.save(paymentOrder);
+            log.info("selected Gateway{}", selectedGatway);
+            PaymentRequest paymentRequest = getPaymentRequest(userDto, bookingDto, paymentOrder);
+            PaymentLinkResponse paymentLink = selectedGatway.createPaymentFlow(paymentRequest);
 
-        return paymentLink;
+            paymentOrder.setPaymentLink(paymentLink.getPayment_link_url());
+            paymentOrder.setPaymentLinkId(paymentLink.getGetPayment_link_id());
+            paymentOrder.setStatus(PaymentOrderStatus.INITIATED);
+            log.warn("paymentOrder{}", paymentOrder);
+            paymentOrderRepository.save(paymentOrder);
 
+            return paymentLink;
+        } catch (Exception e) {
+            log.error("Gateway failed for order {}", paymentOrder.getId(), e);
+            paymentOrder.setStatus(PaymentOrderStatus.FAILED);
+            paymentOrderRepository.save(paymentOrder);
+            throw new RuntimeException(e);
+        }
     }
 
     private PaymentLinkResponse buildResponseFromExisting(PaymentOrder existingOrder) {
