@@ -12,9 +12,6 @@ import com.example.paymentservice.payload.response.PaymentLinkResponse;
 import com.example.paymentservice.gateway.AbstractPaymentGateway;
 import com.example.paymentservice.repository.PaymentOrderRepository;
 import com.example.paymentservice.strategy.PaymentGatewayFactory;
-import com.razorpay.Payment;
-import com.razorpay.RazorpayClient;
-import com.razorpay.RazorpayException;
 import com.stripe.model.checkout.Session;
 import com.stripe.param.checkout.SessionCreateParams;
 import lombok.RequiredArgsConstructor;
@@ -31,7 +28,6 @@ import java.util.Optional;
 @RequiredArgsConstructor
 public class PaymentServiceImpl implements PaymentService {
     private final PaymentOrderRepository paymentOrderRepository;
-    private final RazorpayClient razorpayClient;
     private final PaymentGatewayFactory gateway;
 
     @NotNull
@@ -162,26 +158,7 @@ public class PaymentServiceImpl implements PaymentService {
     @Override
     public boolean confirmPayment(PaymentOrder paymentOrder, String paymentId) {
 
-        if (PaymentOrderStatus.PENDING.equals(paymentOrder.getStatus())) {
-            if (PaymentMethod.RAZORPAY.equals(paymentOrder.getPaymentMethod())) {
-                try {
-                    Payment payment = razorpayClient.payments.fetch(paymentId);
-                    String status = payment.get("status");
-                    if (status.equals("captured")) {
-                        paymentOrder.setStatus(PaymentOrderStatus.SUCCESS);
-                        paymentOrderRepository.save(paymentOrder);
-                        return true;
-                    }
-                } catch (RazorpayException e) {
-                    throw new RuntimeException(e);
-                }
-            }
-        } else {
-            paymentOrder.setStatus(PaymentOrderStatus.SUCCESS);
-            paymentOrderRepository.save(paymentOrder);
-            return true;
-        }
-        return false;
+return true;
     }
 
 
