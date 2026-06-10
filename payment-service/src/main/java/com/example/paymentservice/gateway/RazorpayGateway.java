@@ -1,5 +1,6 @@
 package com.example.paymentservice.gateway;
 
+import com.example.paymentservice.exception.payment.PaymentGatewayException;
 import com.example.paymentservice.model.PaymentRequest;
 import com.example.paymentservice.payload.response.PaymentLinkResponse;
 import com.example.paymentservice.strategy.RazorpayApiClient;
@@ -109,7 +110,7 @@ public class RazorpayGateway extends AbstractPaymentGateway{
 
     public boolean verifyFallback(PaymentRequest request){
         log.error("CIRCUIT OPEN: Cannot verify razorpayLink: {}", request.getOrderId());
-        throw new RuntimeException("Razorpay is temporarily unavailable, Try again later!!");
+        throw new PaymentGatewayException("Razorpay is temporarily unavailable. Try again later!");
     }
 
 

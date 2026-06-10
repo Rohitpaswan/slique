@@ -4,6 +4,10 @@ package com.example.paymentservice.service;
 import com.example.paymentservice.domain.GatewayType;
 import com.example.paymentservice.domain.PaymentMethod;
 import com.example.paymentservice.domain.PaymentOrderStatus;
+import com.example.paymentservice.exception.payment.MissingIdempotencyKeyException;
+import com.example.paymentservice.exception.payment.PaymentGatewayException;
+import com.example.paymentservice.exception.payment.PaymentOrderBrokenException;
+import com.example.paymentservice.exception.payment.PaymentOrderNotFoundException;
 import com.example.paymentservice.model.PaymentOrder;
 import com.example.paymentservice.payload.dto.BookingDto;
 import com.example.paymentservice.model.PaymentRequest;
@@ -12,8 +16,6 @@ import com.example.paymentservice.payload.response.PaymentLinkResponse;
 import com.example.paymentservice.gateway.AbstractPaymentGateway;
 import com.example.paymentservice.repository.PaymentOrderRepository;
 import com.example.paymentservice.strategy.PaymentGatewayFactory;
-import com.stripe.model.checkout.Session;
-import com.stripe.param.checkout.SessionCreateParams;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jetbrains.annotations.NotNull;
@@ -50,7 +52,7 @@ public class PaymentServiceImpl implements PaymentService {
 
     public PaymentLinkResponse createOrder(UserDto userDto, BookingDto bookingDto, PaymentMethod paymentMethod, String idempotencyKey) {
 
-        if (idempotencyKey == null || idempotencyKey.isBlank()) {throw new RuntimeException("Missing idempotencyKey");}
+        if (idempotencyKey == null || idempotencyKey.isBlank()) { throw new MissingIdempotencyKeyException("Missing idempotencyKey");}
 
             Optional<PaymentOrder> existing = paymentOrderRepository.findByIdempotencyKey(idempotencyKey);
             if (existing.isPresent()) {
@@ -66,11 +68,10 @@ public class PaymentServiceImpl implements PaymentService {
 
 
                 if(isBrokenOrder) {
-                    log.warn("Broken order-Id {}, status{}, deleting for retry ", existingOrder.getId(), existingOrder.getStatus());
+                    log.warn("Broken order-Id {}, status{} ", existingOrder.getId(), existingOrder.getStatus());
                     existingOrder.setStatus(PaymentOrderStatus.FAILED);
                     paymentOrderRepository.save(existingOrder);
-                  throw   new RuntimeException(
-                            "Payment order " + existingOrder.getId() + " is in a broken state. Please retry.");
+                  throw  new PaymentOrderBrokenException("Payment order is in a broken state.Order Id: ", existingOrder.getId());
 
                 }
 
@@ -98,15 +99,14 @@ public class PaymentServiceImpl implements PaymentService {
         paymentOrder.setIdempotencyKey(idempotencyKey);
         paymentOrder.setStatus(PaymentOrderStatus.PENDING);
         paymentOrderRepository.save(paymentOrder);
+        AbstractPaymentGateway selectedGateway = gateway.createPaymentGateway(
+                GatewayType.fromPaymentMethod(paymentMethod));
 
         try {
 
-            AbstractPaymentGateway selectedGatway = gateway.createPaymentGateway(
-                    GatewayType.fromPaymentMethod(paymentMethod));
-
-            log.info("selected Gateway{}", selectedGatway);
+            log.info("selected Gateway{}", selectedGateway);
             PaymentRequest paymentRequest = getPaymentRequest(userDto, bookingDto, paymentOrder);
-            PaymentLinkResponse paymentLink = selectedGatway.createPaymentFlow(paymentRequest);
+            PaymentLinkResponse paymentLink = selectedGateway.createPaymentFlow(paymentRequest);
 
             paymentOrder.setPaymentLink(paymentLink.getPayment_link_url());
             paymentOrder.setPaymentLinkId(paymentLink.getGetPayment_link_id());
@@ -119,7 +119,7 @@ public class PaymentServiceImpl implements PaymentService {
             log.error("Gateway failed for order {}", paymentOrder.getId(), e);
             paymentOrder.setStatus(PaymentOrderStatus.FAILED);
             paymentOrderRepository.save(paymentOrder);
-            throw new RuntimeException(e);
+            throw new PaymentGatewayException(selectedGateway.getClass().getSimpleName() + "Failed to create payment link for order" + paymentOrder.getId(), e);
         }
     }
 
@@ -135,7 +135,7 @@ public class PaymentServiceImpl implements PaymentService {
 
     @Override
     public PaymentOrder getPaymentOrderById(Long id) {
-        return paymentOrderRepository.findById(id).orElseThrow(() -> new RuntimeException("Payment order not found" + id));
+        return paymentOrderRepository.findById(id).orElseThrow(() -> new PaymentOrderNotFoundException( "Payment order not found for id: ", id));
     }
 
     @Override
@@ -144,60 +144,6 @@ public class PaymentServiceImpl implements PaymentService {
     }
 
 
-
-    public String createStripePaymentLink(UserDto userDto, Long amount, Long orderId) {
-        try {
-            Session session = Session.create(buildSessionParam(amount, orderId));
-            return session.getUrl();
-
-        } catch (Exception e) {
-            throw new RuntimeException("Error creating Stripe session", e);
-        }
-    }
-
-    @Override
-    public boolean confirmPayment(PaymentOrder paymentOrder, String paymentId) {
-
-return true;
-    }
-
-
-    private SessionCreateParams buildSessionParam(Long amount, Long orderId) {
-        SessionCreateParams.LineItem.PriceData.ProductData productData =
-                SessionCreateParams.LineItem.PriceData.ProductData.builder()
-                        .setName("Salon Booking")
-                        .build();
-
-        SessionCreateParams.LineItem.PriceData priceData =
-                SessionCreateParams.LineItem.PriceData.builder()
-                        .setCurrency("usd")
-                        .setUnitAmount(amount)
-                        .setProductData(productData)
-                        .build();
-
-        SessionCreateParams.LineItem lineItem =
-                SessionCreateParams.LineItem.builder()
-                        .setQuantity(1L)
-                        .setPriceData(priceData)
-                        .build();
-
-        return SessionCreateParams.builder()
-                .setMode(SessionCreateParams.Mode.PAYMENT)
-                .setSuccessUrl(buildSuccessUrl(orderId))
-                .setCancelUrl(buildCancelUrl(orderId))
-                .addPaymentMethodType(SessionCreateParams.PaymentMethodType.CARD)
-                .addLineItem(lineItem)
-                .putMetadata("orderId", orderId.toString())
-                .build();
-    }
-
-    private String buildSuccessUrl(Long orderId) {
-        return "http://localhost:3000/payment-success/" + orderId;
-    }
-
-    private String buildCancelUrl(Long orderId) {
-        return "http://localhost:3000/cancel/" + orderId;
-    }
 
 
 }

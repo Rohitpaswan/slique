@@ -3,6 +3,9 @@ package com.example.paymentservice.service;
 import com.example.paymentservice.config.RazorpayConfig;
 import com.example.paymentservice.domain.PaymentOrderStatus;
 import com.example.paymentservice.domain.WebhookEventStatus;
+import com.example.paymentservice.exception.webhook.WebhookOrderNotFoundException;
+import com.example.paymentservice.exception.webhook.WebhookProcessingException;
+import com.example.paymentservice.exception.webhook.WebhookSignatureException;
 import com.example.paymentservice.model.PaymentOrder;
 import com.example.paymentservice.model.WebhookEventLog;
 import com.example.paymentservice.repository.PaymentOrderRepository;
@@ -13,6 +16,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.json.JSONObject;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Slf4j
 @Service
@@ -30,62 +34,82 @@ public class WebhookService {
             return true;
         } catch (RazorpayException e) {
             log.error("Signature verification failed {}", e.getMessage());
-            return false;
+            throw new WebhookSignatureException("Signature verification failed", e);
         }
     }
 
-    public void processEvent(String payload){
+    @Transactional
+    public void processEvent(String payload, String eventId){
+
+        //Idempotency check
+        if(webhookEventLogRepository.existsByEventId(eventId)){
+            log.info("Event {} already processed, skipping",  eventId);
+            return;
+        }
         JSONObject event = new JSONObject(payload);
 
         String eventType = event.getString("event");
-        log.info("Processing event: {}", eventType);
+        log.info("Processing event: {}, eventId: {}", eventType, eventId);
 
         // save log before processing
-        WebhookEventLog webhookEventlog = new WebhookEventLog();
-        webhookEventlog.setEventType(eventType);
-        webhookEventlog.setPayload(payload);
-        webhookEventlog.setStatus(WebhookEventStatus.PROCESSING);
-        webhookEventLogRepository.save(webhookEventlog);
+        WebhookEventLog logEntry = new WebhookEventLog();
+        logEntry.setEventType(eventType);
+        logEntry.setPayload(payload);
+        logEntry.setStatus(WebhookEventStatus.PROCESSING);
+        logEntry.setEventId(eventId);
+        webhookEventLogRepository.save(logEntry);
 
-        switch (eventType) {
-            case "payment.link.paid"        -> handlePaymentLinkPaid(event);
-            case "payment.failed"           -> handlePaymentFailed(event);
-            default -> log.warn("Unhandled Razorpay event type: {}", eventType);
+
+        try {
+            switch (eventType) {
+                case "payment_link.paid" -> handlePaymentLinkPaid(event, logEntry);
+                case "payment.failed" -> handlePaymentFailed(event, logEntry);
+                default -> log.warn("Unhandled Razorpay event type: {}", eventType);
+            }
+
+        } catch (Exception e) {
+            logEntry.setStatus(WebhookEventStatus.FAILED);
+            throw new WebhookProcessingException(eventId, e);
+        }
+        finally {
+            webhookEventLogRepository.save(logEntry);
         }
     }
 
 
 
-    private void handlePaymentLinkPaid(JSONObject event) {
+    private void handlePaymentLinkPaid(JSONObject event, WebhookEventLog logEntry) {
         String paymentLinkId = event.getJSONObject("payload")
                 .getJSONObject("payment_link")
                 .getJSONObject("entity")
                 .getString("id");
         PaymentOrder paymentOrder = paymentOrderRepository.findByPaymentLinkId(paymentLinkId);
-        WebhookEventLog webhookEventLog = new WebhookEventLog();
 
         if (paymentOrder == null) {
-            webhookEventLog.setStatus(WebhookEventStatus.FAILED);
-            webhookEventLogRepository.save(webhookEventLog);
-            throw new RuntimeException("No order for link: " + paymentLinkId);
+            logEntry.setStatus(WebhookEventStatus.FAILED);
+            webhookEventLogRepository.save(logEntry);
+            throw new WebhookOrderNotFoundException("No order for link: " + paymentLinkId);
         }
 
         if (PaymentOrderStatus.SUCCESS.equals(paymentOrder.getStatus())) {  // 2. Enum-to-enum
             log.info("Order {} already SUCCESS, skipping", paymentOrder.getId());
 
-            webhookEventLog.setPaymentOrderId(paymentOrder.getId());
-            webhookEventLog.setStatus(WebhookEventStatus.PROCESSED);
-            webhookEventLogRepository.save(webhookEventLog);
+            logEntry.setPaymentOrderId(paymentOrder.getId());
+            logEntry.setStatus(WebhookEventStatus.PROCESSED);
+            webhookEventLogRepository.save(logEntry);
             return;
         }
+        logEntry.setPaymentOrderId(paymentOrder.getId());
+        logEntry.setStatus(WebhookEventStatus.PROCESSED);
+        webhookEventLogRepository.save(logEntry);
+
         paymentOrder.setStatus(PaymentOrderStatus.SUCCESS);
         paymentOrderRepository.save(paymentOrder);
-        webhookEventLog.setPaymentOrderId(paymentOrder.getId());
-        webhookEventLog.setStatus(WebhookEventStatus.PROCESSED);
 
 
     }
-    private void handlePaymentFailed(JSONObject event) {
+
+    private void handlePaymentFailed(JSONObject event, WebhookEventLog logEntry) {
         String paymentLinkId = event.getJSONObject("payload")
                 .getJSONObject("payment_link")
                 .getJSONObject("entity")
@@ -96,11 +120,23 @@ public class WebhookService {
                         .findByPaymentLinkId(paymentLinkId);
 
         if(order == null){
-            return;
+            logEntry.setStatus(WebhookEventStatus.FAILED);
+            logEntry.setStatus(WebhookEventStatus.FAILED);
+            webhookEventLogRepository.save(logEntry);
+            throw new WebhookOrderNotFoundException("No order for link: " + paymentLinkId);
         }
 
-        order.setStatus(PaymentOrderStatus.FAILED);
+        if(PaymentOrderStatus.INITIATED.equals(order.getStatus())){
+            order.setStatus(PaymentOrderStatus.FAILED);
+            paymentOrderRepository.save(order);
+            logEntry.setPaymentOrderId(order.getId());
+            logEntry.setStatus(WebhookEventStatus.FAILED);
+            webhookEventLogRepository.save(logEntry);
+        }
+        else {
+            log.warn("Something went wrong{}....- current Status{}", order.getId(), order.getStatus());
 
-        paymentOrderRepository.save(order);
+        }
+
     }
 }

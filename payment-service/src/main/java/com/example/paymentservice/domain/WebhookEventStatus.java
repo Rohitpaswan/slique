@@ -1,5 +1,7 @@
 package com.example.paymentservice.domain;
 
 public enum WebhookEventStatus {
-    PROCESSED, SUCCESS, FAILED,PROCESSING
+    PROCESSING, //received, working on it
+    PROCESSED, // done successfully
+    FAILED //failed
 }

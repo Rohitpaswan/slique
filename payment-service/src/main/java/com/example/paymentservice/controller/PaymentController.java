@@ -44,16 +44,7 @@ public class PaymentController {
 		
 	}
 	
-	@GetMapping("/proceed")
-	
-	public ResponseEntity<Boolean> processedPayment(@RequestParam String paymentId,
-	                                                @RequestParam String paymentLinkid) {
-		
-		PaymentOrder paymentOrder = paymentService.getPaymentOrderByPaymentId(paymentId);
-		Boolean res = paymentService.confirmPayment(paymentOrder, paymentId);
-		return ResponseEntity.ok(res);
-		
-	}
+
 	
 	
 }

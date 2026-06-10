@@ -1,5 +1,6 @@
 package com.example.paymentservice.gateway;
 
+import com.example.paymentservice.exception.payment.PaymentVerificationException;
 import com.example.paymentservice.model.PaymentRequest;
 import com.example.paymentservice.payload.response.PaymentLinkResponse;
 import lombok.RequiredArgsConstructor;
@@ -10,7 +11,7 @@ public abstract class AbstractPaymentGateway {
 
     public final PaymentLinkResponse createPaymentFlow(PaymentRequest request) {
         //validation
-        if (!validatePayement(request)) throw new IllegalArgumentException("Paymetn verfication failed");
+        if (!validatePayement(request)) throw new PaymentVerificationException("invalid signature or payload");
 
         //create payment Link
         PaymentLinkResponse paymentLinkResponse = createPaymentLink(request);

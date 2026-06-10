@@ -19,7 +19,7 @@ public interface PaymentService {
 
 
 	
-	boolean confirmPayment(PaymentOrder paymentOrder, String paymentId);
+
 	
 	
 }
