@@ -16,7 +16,7 @@ public interface SalonFeignClient {
     ResponseEntity<List<SalonDto>> getSalonBYOwnerId(@RequestHeader("Authorization") String jwt);
 
 
-    @GetMapping("/api/salons/{salonId}")
+    @GetMapping("/{salonId}")
      ResponseEntity<SalonDto> getSalonById(@PathVariable Long salonId);
 
 

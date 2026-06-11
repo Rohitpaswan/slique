@@ -1,5 +1,6 @@
 package com.example.bookingservice.service;
 
+import com.example.bookingservice.exception.*;
 import com.example.bookingservice.request.BookingRequest;
 import com.example.bookingservice.dto.SalonDto;
 import com.example.bookingservice.dto.ServiceOfferingDto;
@@ -71,19 +72,19 @@ public class BookingServiceImpl implements BookingService {
 		
 		// Rule 1: Same day only
 		if (!bookingStartTime.toLocalDate().equals(bookingEndTime.toLocalDate())) {
-			throw new RuntimeException("Booking cannot span multiple days");
+            throw new MultiDayBookingException("Booking cannot span multiple days");
 		}
 		
 		//Rule 2: Within working hours
 		if (bookingStartTime.isBefore(openingTime) || bookingEndTime.isAfter(closingTime)) {
-			throw new RuntimeException("Outside working hours");
+			throw new OutsideWorkingHoursException( openingTime, closingTime);
 		}
 		
 		for (Booking existingBooking : existingBookings) {
 			//Rule 3: Overlapping
 			if ((bookingStartTime.isBefore(existingBooking.getEndTime()))
 					&& (bookingEndTime.isAfter(existingBooking.getStartTime()))) {
-				throw new RuntimeException("choice another slot");
+				throw new TimeSlotUnavailableException(existingBooking.getStartTime(), existingBooking.getEndTime());
 			}
 		}
 	}
@@ -94,17 +95,17 @@ public class BookingServiceImpl implements BookingService {
 		Booking booking = bookingRepository.findById(bookingId).orElseThrow(() ->  new RuntimeException("booking not found"));
 
 		if (!booking.getCustomerId().equals(userDto.getId())) {
-			throw new RuntimeException("You are not allowed to modify this booking");
+			throw new UnauthorizedBookingAccessException("You are not allowed to modify this booking");
 		}
 
 		// Only PENDING or CONFIRMED bookings can be partially cancelled
 		if (booking.getStatus() == BookingStatus.CANCEL) {
-			throw new RuntimeException("Cannot modify an already cancelled booking");
+			throw new UnauthorizedBookingAccessException("Cannot modify an already cancelled booking");
 		}
 
 		// validate service ids belong to this booking
 		if (!booking.getServiceIds().containsAll(cancelServiceIds)) {
-			throw new RuntimeException("Some service IDs don't belong to this booking");
+			throw new InvalidServiceIdsException(cancelServiceIds);
 		}
 
 
@@ -125,6 +126,7 @@ public class BookingServiceImpl implements BookingService {
 		}
 
 		Set<ServiceOfferingDto> remainingServices =	serviceOffering.getServicesByIds(remainingServiceIds).getBody();
+		if(remainingServices == null || remainingServices.isEmpty()) throw new ResourceNotFoundException("Services not found");
 		Double newTotalPrice = remainingServices.stream()
 				.mapToDouble(ServiceOfferingDto::getPrice).sum();
 
@@ -142,7 +144,10 @@ public class BookingServiceImpl implements BookingService {
 
 	@Override
 	public List<Booking> getBookingByCustomer(Long customerId) {
-		return bookingRepository.findByCustomerId(customerId);
+
+		List<Booking> customers =  bookingRepository.findByCustomerId(customerId);
+		if(customers == null || customers.isEmpty()) throw new ResourceNotFoundException("Customers data not found");
+		return customers;
 	}
 	
 	@Override
@@ -152,15 +157,13 @@ public class BookingServiceImpl implements BookingService {
 	
 	@Override
 	public Booking getBookingById(Long id) {
-		Booking booking = bookingRepository.findById(id).orElseThrow(() -> new RuntimeException("Id not found"));
-		if (booking == null) throw new RuntimeException("Not found");
-		return booking;
+		return bookingRepository.findById(id).orElseThrow(() ->  new BookingNotFoundException(id));
 	}
 	
 	@Override
 	public List<Booking> getBookingByDate(LocalDateTime date, Long salonId) {
 		List<Booking> bookings = getBookingBySalon(salonId);
-		if (bookings == null) throw new RuntimeException("No booking");
+		if (bookings == null) throw new NoBookingsFoundException("No booking found for salon id: " + salonId);
 		return bookings.stream()
 				.filter(booking -> date.equals(booking.getStartTime())
 						|| date.equals(booking.getEndTime()))

@@ -4,6 +4,7 @@ import com.example.bookingservice.dto.BookingDto;
 import com.example.bookingservice.dto.SalonDto;
 import com.example.bookingservice.dto.ServiceOfferingDto;
 import com.example.bookingservice.dto.UserDto;
+import com.example.bookingservice.exception.ResourceNotFoundException;
 import com.example.bookingservice.mapper.BookingMapper;
 import com.example.bookingservice.model.Booking;
 import com.example.bookingservice.service.client.SalonFeignClient;
@@ -33,10 +34,13 @@ public class BookingAggregationService {
         Set<Long> serviceIds = bookingList.stream().flatMap(booking -> booking.getServiceIds().stream()).collect(Collectors.toSet());
 
         List<UserDto> users = userFeignClient.getUsersByIds(customerIds).getBody();
+        if(users == null ||  users.isEmpty()) throw  new ResourceNotFoundException( "Users not found");
 
         List<SalonDto> salonDtos = salonFeignClient.getSalonsByIds(salonIds).getBody();
+        if(salonDtos == null ||  salonDtos.isEmpty()) throw  new ResourceNotFoundException("Salons Not found");
 
         Set<ServiceOfferingDto> services = serviceOfferingFeignClient.getServicesByIds(serviceIds).getBody();
+        if(services == null ||  services.isEmpty()) throw  new ResourceNotFoundException("services Not found");
 
         //covert list to map
         Map<Long, UserDto> userMap = users.stream().collect(Collectors.toMap(UserDto::getId, u -> u));

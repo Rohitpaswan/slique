@@ -16,5 +16,5 @@ public interface PaymentFeignClient {
 
     @PostMapping
     ResponseEntity<PaymentLinkResponse> createPaymentLink(@RequestBody BookingDto bookingDto,
-                                                      @RequestParam PaymentMethod paymentMethod, @RequestHeader("Authorization") String jwt);
+                                                      @RequestParam PaymentMethod paymentMethod, @RequestHeader("Authorization") String jwt, @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey);
 }

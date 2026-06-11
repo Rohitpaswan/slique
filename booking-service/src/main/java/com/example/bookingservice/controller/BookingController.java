@@ -1,6 +1,8 @@
 package com.example.bookingservice.controller;
 
 import com.example.bookingservice.dto.*;
+import com.example.bookingservice.exception.ResourceNotFoundException;
+import com.example.bookingservice.exception.UnauthorizedBookingAccessException;
 import com.example.bookingservice.request.BookingRequest;
 import com.example.bookingservice.request.BookingUpdateRequest;
 import com.example.bookingservice.service.BookingAggregationService;
@@ -13,6 +15,7 @@ import com.example.bookingservice.service.client.SalonFeignClient;
 import com.example.bookingservice.service.client.ServiceOfferingFeignClient;
 import com.example.bookingservice.service.client.UserFeignClient;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -21,6 +24,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Set;
 
+@Slf4j
 @RestController
 @RequestMapping("/api/bookings/")
 @RequiredArgsConstructor
@@ -32,17 +36,18 @@ public class BookingController {
     private final PaymentFeignClient paymentFeignClient;
     private final BookingAggregationService bookingAggregationService;
 
-    @PostMapping
+    @PostMapping("/create")
     public ResponseEntity<PaymentLinkResponse> createBooking(@RequestBody BookingRequest booking,
                                                              @RequestHeader("Authorization") String jwt,
                                                              @RequestParam Long salonId,
-                                                             @RequestParam PaymentMethod paymentMethod) {
+                                                             @RequestParam PaymentMethod paymentMethod,
+                                                             @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey) {
 
         UserDto userDto = userFeignClient.getUserFromJwtToken(jwt).getBody();
         SalonDto salonDto = salonFeignClient.getSalonById(salonId).getBody();
         Set<ServiceOfferingDto> services = serviceOfferingFeignClient.getServicesByIds(booking.getServiceIds()).getBody();
         Booking savedBooking = bookingService.createBooking(booking, userDto, salonDto, services);
-        PaymentLinkResponse paymentLinkResponse = paymentFeignClient.createPaymentLink(bookingAggregationService.buildBookingDto(savedBooking), paymentMethod, jwt).getBody();
+        PaymentLinkResponse paymentLinkResponse = paymentFeignClient.createPaymentLink(bookingAggregationService.buildBookingDto(savedBooking), paymentMethod, jwt, idempotencyKey).getBody();
         return ResponseEntity.status(HttpStatus.CREATED).body(paymentLinkResponse);
 
     }
@@ -51,7 +56,7 @@ public class BookingController {
     @GetMapping("/customer")
     public ResponseEntity<Set<BookingDto>> getBookingByCustomer(@RequestHeader("Authorization") String jwt) {
         UserDto userDto = userFeignClient.getUserFromJwtToken(jwt).getBody();
-        if (userDto == null || userDto.getId() == null) throw new RuntimeException("User Not found");
+        if (userDto == null || userDto.getId() == null) throw new ResourceNotFoundException("User Not found");
         List<Booking> bookingList = bookingService.getBookingByCustomer(userDto.getId());
         Set<BookingDto> bookingDtos = bookingAggregationService.buildBookingDtos(bookingList);
         return ResponseEntity.status(HttpStatus.OK).body(bookingDtos);
@@ -71,7 +76,8 @@ public class BookingController {
         boolean isOwnerSalon = ownedSalons.stream().anyMatch(salon -> salon.getSalonId().equals(salonId));
 
         if (!isOwnerSalon) {
-            throw new RuntimeException("Salon not found for this owner");
+            log.info("Unauthorized Access");
+            throw new UnauthorizedBookingAccessException("Unauthorized Access: "  );
         }
 
         List<Booking> bookingList = bookingService.getBookingBySalon(salonId);
@@ -125,11 +131,13 @@ public class BookingController {
         boolean isOwnerSalon = ownedSalons.stream().anyMatch(salon -> salon.getSalonId().equals(salonId));
 
         if (!isOwnerSalon) {
-            throw new RuntimeException("Salon not found for this owner");
+            log.info("Unauthorized Access ");
+            throw new UnauthorizedBookingAccessException("Unauthorized Access: "  );
         }
         SalonReport salonReport = bookingService.getSalonReport(salonId);
         return ResponseEntity.status(HttpStatus.OK).body(salonReport);
     }
+
 
 
 }
