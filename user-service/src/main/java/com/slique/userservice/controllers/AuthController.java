@@ -2,8 +2,10 @@ package com.slique.userservice.controllers;
 
 import com.slique.userservice.payload.dto.LoginDto;
 import com.slique.userservice.payload.dto.SignupDto;
+import com.slique.userservice.payload.request.RefreshTokenRequest;
 import com.slique.userservice.payload.response.AuthResponse;
 import com.slique.userservice.service.AuthService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -27,11 +29,11 @@ public class AuthController {
         return ResponseEntity.status(HttpStatus.CREATED).body(authResponse);
     }
 
-    @GetMapping("/access-token/refresh-token/{refreshToken}")
+    @PostMapping("/access-token/refresh-token")
     public ResponseEntity<AuthResponse> getAccessTokenHandler(
-            @PathVariable String refreshToken) throws Exception {
+           @Valid @RequestBody RefreshTokenRequest refreshToken)  {
 
-        AuthResponse response = authService.getAccessTokenFromRefreshToken(refreshToken);
+        AuthResponse response = authService.getAccessTokenFromRefreshToken(refreshToken.getRefreshToken());
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 

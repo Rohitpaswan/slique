@@ -1,6 +1,7 @@
 package com.slique.userservice.service.impl;
 
 
+import com.slique.userservice.exception.ResourceNotFoundException;
 import com.slique.userservice.model.User;
 import com.slique.userservice.payload.dto.KeycloakUserDto;
 import com.slique.userservice.repository.UserRepository;
@@ -29,7 +30,7 @@ public class UserServiceImpl implements UserService {
     public User getUserByEmail(String email) {
         User user=userRepository.findByEmail(email);
         if(user==null){
-            throw new RuntimeException("User not found with email: "+email);
+            throw new ResourceNotFoundException("User not found with email: "+email);
         }
         return user;
     }
@@ -65,14 +66,15 @@ public class UserServiceImpl implements UserService {
     @Override
     public void deleteUser(Long id) {
          userRepository.findById(id)
-                        .orElseThrow(() -> new RuntimeException("User not found with id: " + id));
+                        .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + id));
         userRepository.deleteById(id);
         
     }
 
     @Override
     public List<User> getUsersByIds(Set<Long> ids) {
-        if (ids == null || ids.isEmpty()) { return List.of(); }
+        if (ids == null || ids.isEmpty()) { throw new ResourceNotFoundException("Users data is null or not found");
+        }
         return userRepository.findByIdIn(ids);
     }
 }

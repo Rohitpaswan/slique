@@ -2,6 +2,9 @@ package com.slique.userservice.service;
 
 import com.slique.userservice.config.KeycloakConfig;
 import com.slique.userservice.domain.KeycloakRole;
+import com.slique.userservice.exception.KeycloakIntegrationException;
+import com.slique.userservice.exception.ResourceNotFoundException;
+import com.slique.userservice.exception.TokenGenerationException;
 import com.slique.userservice.payload.dto.KeycloakUserDto;
 import com.slique.userservice.payload.dto.SignupDto;
 import com.slique.userservice.payload.request.Credential;
@@ -71,6 +74,7 @@ public class KeycloakService {
 
         } catch (Exception e) {
             log.error(e.getMessage());
+           throw new KeycloakIntegrationException("Failed to connected with keycloak");
         }
 
 
@@ -90,7 +94,7 @@ public class KeycloakService {
 
         } catch (Exception e) {
 
-            throw new RuntimeException("Failed to assign roles: " + e.getMessage());
+            throw new KeycloakIntegrationException("Failed to assign roles: " + e.getMessage());
         }
     }
 
@@ -112,8 +116,10 @@ public class KeycloakService {
             return responseResponseEntity.getBody();
 
         } catch (Exception e) {
-            log.error(e.getMessage());
-            throw new RuntimeException(e);
+
+            log.error("Token generation error: {}", e.getMessage(), e);
+            throw new TokenGenerationException("Failed to generate token: " + e.getMessage());
+
         }
 
 
@@ -162,18 +168,17 @@ public class KeycloakService {
             // Send the GET request
             ResponseEntity<KeycloakUserDto[]> response = restTemplate.exchange(url, HttpMethod.GET, entity, KeycloakUserDto[].class);
 
-            log.info("Keycloak response{}", response);
             // Extract and return the first user object
             KeycloakUserDto[] users = response.getBody();
             if (users != null && users.length > 0) {
                 return users[0]; // Return the first user
             } else {
-                throw new Exception("No users found for username: " + username);
+                throw new ResourceNotFoundException("No users found for username: " + username);
             }
 
         } catch (Exception e) {
-
-            throw new RuntimeException("Failed to fetch user details: " + e.getMessage());
+            log.error("Failed to fetch Keycloak user details: {}", username);
+            throw new KeycloakIntegrationException("Failed to fetch user details: " + e.getMessage());
         }
 
 
@@ -181,7 +186,6 @@ public class KeycloakService {
 
 
     public KeycloakUserDto fetchUserProfileByJwt(String token)  {
-        System.out.println("keycloak profile token "+ token);
         String url = keycloakConfig.getBaseUrl() +"/realms/slique/protocol/openid-connect/userinfo";
 
        HttpHeaders headers = new HttpHeaders();
@@ -205,8 +209,8 @@ public class KeycloakService {
             return response.getBody();
 
         } catch (Exception e) {
-            System.out.println("Failed to fetch user details: " + e.getMessage());
-            throw new RuntimeException("Failed to fetch user details: " + e.getMessage());
+            log.error("Failed to fetch user details: {}", e.getMessage());
+            throw new KeycloakIntegrationException("Failed to fetch user details: " + e.getMessage());
         }
     }
 
